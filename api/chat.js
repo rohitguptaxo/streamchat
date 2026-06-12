@@ -8,53 +8,74 @@ export default async function handler(req, res) {
 
   try {
     const { messages, system } = req.body;
-
     const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) return res.status(500).json({ error: 'GEMINI_API_KEY not set in Vercel environment variables' });
 
-    // Use v1beta with gemini-2.0-flash-lite — highest free quota
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:streamGenerateContent?alt=sse&key=${apiKey}`;
+    if (!apiKey) {
+      return res.status(500).json({ error: 'GEMINI_API_KEY not configured in Vercel' });
+    }
 
-    // Filter out empty messages and ensure valid alternating roles
+    // Build valid alternating user/model conversation
     const validMessages = [];
     let lastRole = null;
     for (const m of messages) {
-      if (!m.content || !m.content.trim()) continue;
+      if (!m.content?.trim()) continue;
       const role = m.role === 'assistant' ? 'model' : 'user';
-      if (role === lastRole) continue; // skip duplicates
+      if (role === lastRole) {
+        // Merge consecutive same-role messages
+        validMessages[validMessages.length - 1].parts[0].text += '\n' + m.content;
+        continue;
+      }
       validMessages.push({ role, parts: [{ text: m.content }] });
       lastRole = role;
     }
 
-    // Must start with user
-    if (validMessages.length === 0 || validMessages[0].role !== 'user') {
-      return res.status(400).json({ error: 'Conversation must start with a user message' });
+    if (!validMessages.length || validMessages[0].role !== 'user') {
+      return res.status(400).json({ error: 'No valid messages' });
     }
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        system_instruction: {
-          parts: [{ text: system || `You are StreamChat, a helpful AI assistant. Today is ${new Date().toDateString()}. Use rich markdown formatting.` }]
-        },
-        contents: validMessages,
-        generationConfig: {
-          maxOutputTokens: 8192,
-          temperature: 0.9,
+    const systemPrompt = system || `You are StreamChat, a helpful AI assistant. Today is ${new Date().toDateString()}. Use rich markdown formatting — headers, lists, bold, code blocks where appropriate.`;
+
+    // Try models in order of preference
+    const models = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash'];
+    let response = null;
+    let lastError = null;
+
+    for (const model of models) {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`;
+      try {
+        response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            system_instruction: { parts: [{ text: systemPrompt }] },
+            contents: validMessages,
+            generationConfig: { maxOutputTokens: 8192, temperature: 0.9 },
+          }),
+        });
+        if (response.ok) break;
+        const errBody = await response.json().catch(() => ({}));
+        lastError = errBody?.error?.message || `HTTP ${response.status}`;
+        if (response.status === 429) {
+          // Try next model
+          response = null;
+          continue;
         }
-      }),
-    });
-
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      const msg = err?.error?.message || `Gemini API error ${response.status}`;
-      if (response.status === 429) {
-        return res.status(429).json({ error: 'Rate limit hit — wait a few seconds and try again. Free tier allows 15 requests/min.' });
+        break;
+      } catch (e) {
+        lastError = e.message;
+        response = null;
       }
-      return res.status(response.status).json({ error: msg });
     }
 
+    if (!response || !response.ok) {
+      return res.status(429).json({
+        error: lastError?.includes('quota') || lastError?.includes('429')
+          ? 'Rate limit reached. Wait 30 seconds and try again (free tier: 15 req/min).'
+          : lastError || 'All models unavailable'
+      });
+    }
+
+    // Stream the response
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
@@ -90,12 +111,11 @@ export default async function handler(req, res) {
       }
     }
 
-    if (!sentStop) {
-      res.write(`data: ${JSON.stringify({ type: 'message_stop' })}\n\n`);
-    }
+    if (!sentStop) res.write(`data: ${JSON.stringify({ type: 'message_stop' })}\n\n`);
     res.end();
+
   } catch (err) {
-    console.error('API error:', err);
+    console.error('Handler error:', err);
     res.status(500).json({ error: err.message });
   }
 }
