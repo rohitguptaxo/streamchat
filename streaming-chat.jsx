@@ -189,7 +189,7 @@ async function streamChat(messages, model, webSearch, onToken, onDone, onError) 
       messages: messages.map(m => ({ role: m.role, content: m.content })),
     };
     if (webSearch) body.tools = [{ type: "web_search_20250305", name: "web_search" }];
-    const res = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const res = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     if (!res.ok) { const e = await res.json(); throw new Error(e?.error?.message || `API ${res.status}`); }
     const reader = res.body.getReader(); const dec = new TextDecoder(); let buf = "";
     while (true) {
