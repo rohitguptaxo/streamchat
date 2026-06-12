@@ -9,21 +9,36 @@ export default async function handler(req, res) {
   try {
     const { messages, system } = req.body;
 
-    // Convert messages to Gemini format
-    const geminiMessages = messages.map(m => ({
-      role: m.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: m.content }]
-    }));
-
     const apiKey = process.env.GEMINI_API_KEY;
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${apiKey}`;
+    if (!apiKey) return res.status(500).json({ error: 'GEMINI_API_KEY not set in Vercel environment variables' });
+
+    // Use v1beta with gemini-2.0-flash-lite — highest free quota
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:streamGenerateContent?alt=sse&key=${apiKey}`;
+
+    // Filter out empty messages and ensure valid alternating roles
+    const validMessages = [];
+    let lastRole = null;
+    for (const m of messages) {
+      if (!m.content || !m.content.trim()) continue;
+      const role = m.role === 'assistant' ? 'model' : 'user';
+      if (role === lastRole) continue; // skip duplicates
+      validMessages.push({ role, parts: [{ text: m.content }] });
+      lastRole = role;
+    }
+
+    // Must start with user
+    if (validMessages.length === 0 || validMessages[0].role !== 'user') {
+      return res.status(400).json({ error: 'Conversation must start with a user message' });
+    }
 
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        system_instruction: { parts: [{ text: system }] },
-        contents: geminiMessages,
+        system_instruction: {
+          parts: [{ text: system || `You are StreamChat, a helpful AI assistant. Today is ${new Date().toDateString()}. Use rich markdown formatting.` }]
+        },
+        contents: validMessages,
         generationConfig: {
           maxOutputTokens: 8192,
           temperature: 0.9,
@@ -32,8 +47,12 @@ export default async function handler(req, res) {
     });
 
     if (!response.ok) {
-      const err = await response.json();
-      return res.status(response.status).json({ error: err?.error?.message || 'Gemini API error' });
+      const err = await response.json().catch(() => ({}));
+      const msg = err?.error?.message || `Gemini API error ${response.status}`;
+      if (response.status === 429) {
+        return res.status(429).json({ error: 'Rate limit hit — wait a few seconds and try again. Free tier allows 15 requests/min.' });
+      }
+      return res.status(response.status).json({ error: msg });
     }
 
     res.setHeader('Content-Type', 'text/event-stream');
@@ -43,6 +62,7 @@ export default async function handler(req, res) {
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
+    let sentStop = false;
 
     while (true) {
       const { done, value } = await reader.read();
@@ -59,26 +79,23 @@ export default async function handler(req, res) {
           const parsed = JSON.parse(data);
           const text = parsed?.candidates?.[0]?.content?.parts?.[0]?.text;
           if (text) {
-            // Emit in Anthropic-compatible SSE format so frontend works unchanged
-            res.write(`data: ${JSON.stringify({
-              type: 'content_block_delta',
-              delta: { type: 'text_delta', text }
-            })}\n\n`);
+            res.write(`data: ${JSON.stringify({ type: 'content_block_delta', delta: { type: 'text_delta', text } })}\n\n`);
           }
           const finishReason = parsed?.candidates?.[0]?.finishReason;
-          if (finishReason && finishReason !== 'STOP' && finishReason !== 'MAX_TOKENS') {
-            // keep going
-          }
-          if (finishReason === 'STOP' || finishReason === 'MAX_TOKENS') {
+          if (finishReason && !sentStop) {
+            sentStop = true;
             res.write(`data: ${JSON.stringify({ type: 'message_stop' })}\n\n`);
           }
         } catch {}
       }
     }
 
-    res.write(`data: ${JSON.stringify({ type: 'message_stop' })}\n\n`);
+    if (!sentStop) {
+      res.write(`data: ${JSON.stringify({ type: 'message_stop' })}\n\n`);
+    }
     res.end();
   } catch (err) {
+    console.error('API error:', err);
     res.status(500).json({ error: err.message });
   }
 }
