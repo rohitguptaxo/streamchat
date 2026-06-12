@@ -86,7 +86,7 @@ const store = createStore(
     session: getSession(),
     threads: [], activeThreadId: null,
     streaming: false, streamingText: "", tokenCount: 0, tokensPerSec: 0, totalTokens: 0,
-    error: null, webSearchEnabled: true, model: "gemini-2.0-flash", sidebarOpen: true,
+    error: null, webSearchEnabled: true, model: "llama-3.3-70b-versatile", sidebarOpen: true,
     authView: "signin", // "signin" | "signup"
     showUserMenu: false,
   },
@@ -586,8 +586,8 @@ const QP = [
 ];
 
 const MODELS = [
-  { id: "gemini-2.0-flash", label: "Gemini Flash", desc: "Fast · Free" },
-  { id: "gemini-1.5-pro", label: "Gemini Pro", desc: "Powerful · Free" },
+  { id: "llama-3.3-70b-versatile", label: "Llama 3.3 70B", desc: "Fast · Free" },
+  { id: "llama-3.1-8b-instant", label: "Llama 3.1 8B", desc: "Fastest · Free" },
 ];
 
 // ─── Main chat app ────────────────────────────────────────────────────────────
