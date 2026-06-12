@@ -6,7 +6,7 @@ A high-performance real-time AI chat interface built with React.
 
 ## 🌐 Live Demo
 
-👉 **[streamchat-2a2euhowt-rohitguptaxos-projects.vercel.app](streamchat-jnsct51wj-rohitguptaxos-projects.vercel.app)**
+👉 **[streamchat-2a2euhowt-rohitguptaxos-projects.vercel.app](https://streamchat-jnsct51wj-rohitguptaxos-projects.vercel.app)**
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/rohitguptaxo/streamchat)
 
