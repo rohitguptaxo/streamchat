@@ -80,3 +80,14 @@ Each user's chat history is isolated by their user ID.
 ## License
 
 MIT
+
+## 🌐 Live Demo
+
+| Platform | URL |
+|----------|-----|
+| **Vercel** | [streamchat.vercel.app](https://streamchat.vercel.app) *(deploy via vercel.com)* |
+| **GitHub Pages** | [rohitguptaxo.github.io/streamchat](https://rohitguptaxo.github.io/streamchat) *(auto-deploys on push)* |
+
+## Deploy in 1 click
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/rohitguptaxo/streamchat)
