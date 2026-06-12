@@ -86,7 +86,7 @@ const store = createStore(
     session: getSession(),
     threads: [], activeThreadId: null,
     streaming: false, streamingText: "", tokenCount: 0, tokensPerSec: 0, totalTokens: 0,
-    error: null, webSearchEnabled: true, model: "claude-sonnet-4-20250514", sidebarOpen: true,
+    error: null, webSearchEnabled: true, model: "gemini-2.0-flash", sidebarOpen: true,
     authView: "signin", // "signin" | "signup"
     showUserMenu: false,
   },
@@ -184,11 +184,10 @@ function renderMd(text) {
 async function streamChat(messages, model, webSearch, onToken, onDone, onError) {
   try {
     const body = {
-      model, max_tokens: 8000, stream: true,
-      system: `You are StreamChat — a fast, brilliant AI assistant with real-time web access. Today: ${new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}. Use web search proactively for any factual, news, weather, sports, finance, or current-events queries. Be thorough, accurate, cite sources. Use rich markdown formatting.`,
+      model,
+      system: `You are StreamChat — a fast, brilliant AI assistant. Today: ${new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}. Be thorough, accurate, and use rich markdown formatting with headers, lists, and code blocks where helpful.`,
       messages: messages.map(m => ({ role: m.role, content: m.content })),
     };
-    if (webSearch) body.tools = [{ type: "web_search_20250305", name: "web_search" }];
     const res = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     if (!res.ok) { const e = await res.json(); throw new Error(e?.error?.message || `API ${res.status}`); }
     const reader = res.body.getReader(); const dec = new TextDecoder(); let buf = "";
@@ -587,8 +586,8 @@ const QP = [
 ];
 
 const MODELS = [
-  { id: "claude-sonnet-4-20250514", label: "Sonnet 4", desc: "Fast · 8k tokens" },
-  { id: "claude-opus-4-20250514", label: "Opus 4", desc: "Powerful · 8k tokens" },
+  { id: "gemini-2.0-flash", label: "Gemini Flash", desc: "Fast · Free" },
+  { id: "gemini-1.5-pro", label: "Gemini Pro", desc: "Powerful · Free" },
 ];
 
 // ─── Main chat app ────────────────────────────────────────────────────────────
