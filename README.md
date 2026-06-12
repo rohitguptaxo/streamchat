@@ -2,7 +2,13 @@
 
 A high-performance real-time AI chat interface built with React.
 
-![StreamChat](https://img.shields.io/badge/React-18-blue) ![Streaming](https://img.shields.io/badge/Streaming-SSE-yellow) ![Auth](https://img.shields.io/badge/Auth-LocalStorage-green)
+![StreamChat](https://img.shields.io/badge/React-18-blue) ![Streaming](https://img.shields.io/badge/Streaming-SSE-yellow) ![Auth](https://img.shields.io/badge/Auth-LocalStorage-green) ![Vercel](https://img.shields.io/badge/Deployed-Vercel-black)
+
+## 🌐 Live Demo
+
+👉 **[streamchat-2a2euhowt-rohitguptaxos-projects.vercel.app](https://streamchat-2a2euhowt-rohitguptaxos-projects.vercel.app)**
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/rohitguptaxo/streamchat)
 
 ## Features
 
@@ -19,11 +25,11 @@ A high-performance real-time AI chat interface built with React.
 ## Tech Stack
 
 - **React 18** — functional components + hooks
-- **Zustand-lite** — custom lightweight state store (same API pattern)
+- **Zustand-lite** — custom lightweight state store
 - **Anthropic Claude API** — streaming messages endpoint
 - **Web Search Tool** — `web_search_20250305`
 - **Vite** — development and build
-- **Tailwind-inspired** — all styles inline, no build step for CSS
+- **Vercel** — deployment
 
 ## Color Palette
 
@@ -40,24 +46,6 @@ npm install
 npm run dev
 ```
 
-The app uses the Anthropic API via the claude.ai artifact proxy — no API key config needed when running inside Claude artifacts.
-
-For standalone deployment, add your API key to a `.env` file:
-
-```
-VITE_ANTHROPIC_API_KEY=sk-ant-...
-```
-
-And update the fetch headers in `streaming-chat.jsx`:
-
-```js
-headers: {
-  "Content-Type": "application/json",
-  "x-api-key": import.meta.env.VITE_ANTHROPIC_API_KEY,
-  "anthropic-version": "2023-06-01",
-}
-```
-
 ## Project Structure
 
 ```
@@ -67,6 +55,7 @@ streamchat/
 │   └── main.jsx         # React entry point
 ├── index.html           # HTML shell
 ├── vite.config.js       # Vite config
+├── vercel.json          # Vercel deployment config
 └── package.json
 ```
 
@@ -79,15 +68,4 @@ Each user's chat history is isolated by their user ID.
 
 ## License
 
-MIT
-
-## 🌐 Live Demo
-
-| Platform | URL |
-|----------|-----|
-| **Vercel** | [streamchat.vercel.app](https://streamchat.vercel.app) *(deploy via vercel.com)* |
-| **GitHub Pages** | [rohitguptaxo.github.io/streamchat](https://rohitguptaxo.github.io/streamchat) *(auto-deploys on push)* |
-
-## Deploy in 1 click
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/rohitguptaxo/streamchat)
+MIT — built by [@rohitguptaxo](https://github.com/rohitguptaxo)
